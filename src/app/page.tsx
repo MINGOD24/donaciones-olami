@@ -1,47 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
+import { useState } from "react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 const opcionesDonacion = [
-  { label: 'Mentoría personalizada (1 sesión)', monto: 20000 },
-  { label: 'Set de libros para novios', monto: 30000 },
-  { label: 'Grupo de estudio', monto: 50000 },
-  { label: 'Clase Especial de Olami Infinity', monto: 80000 },
-  { label: 'Evento general (charlas, encuentros…)', monto: 100000 },
-  { label: 'Adoptar un grupo mensual de estudio', monto: 200000 },
-  { label: 'Olami Infinity (Programa mensual de inclusión)', monto: 320000 },
-  { label: 'Patrocinador cena de Shabat', monto: 350000 },
-  { label: 'Shabatón', monto: 1000000 },
-  { label: 'Otro monto', monto: 0 },
+  { label: "Mentoría personalizada (1 sesión)", monto: 20000 },
+  { label: "Set de libros para novios", monto: 30000 },
+  { label: "Grupo de estudio", monto: 50000 },
+  { label: "Clase Especial de Olami Infinity", monto: 80000 },
+  { label: "Evento general (charlas, encuentros…)", monto: 100000 },
+  { label: "Adoptar un grupo mensual de estudio", monto: 200000 },
+  { label: "Evento Jbiz", monto: 250000 },
+  { label: "Olami Infinity (Programa mensual de inclusión)", monto: 320000 },
+  { label: "Patrocinador cena de Shabat", monto: 350000 },
+  { label: "Shabatón", monto: 1000000 },
+  { label: "Otro monto", monto: 0 },
 ];
 
 export default function Home() {
   const [form, setForm] = useState({
-    contacto: '',
-    email: '',
-    rut: '',
-    opcion: '',
+    contacto: "",
+    email: "",
+    rut: "",
+    opcion: "",
     monto: 0,
-    otroMonto: '',
-    dedicatoria: '',
+    otroMonto: "",
+    dedicatoria: "",
   });
 
   const [isOneTime, setIsOneTime] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
 
     if (!form.opcion || form.monto <= 0) {
-      setError('Selecciona una opción y monto válido.');
+      setError("Selecciona una opción y monto válido.");
       return;
     }
 
     if (!form.contacto || !form.email.trim() || !form.rut.trim()) {
-      setError('Teléfono, correo y RUT son obligatorios.');
+      setError("Teléfono, correo y RUT son obligatorios.");
       return;
     }
 
@@ -49,10 +50,10 @@ export default function Home() {
 
     const payload = { ...form };
 
-    const endpoint = isOneTime ? '/api/checkout' : '/api/subscribe';
+    const endpoint = isOneTime ? "/api/checkout" : "/api/subscribe";
 
     const res = await fetch(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(payload),
     });
 
@@ -61,7 +62,7 @@ export default function Home() {
     if (res.ok && result.init_point) {
       window.location.href = result.init_point;
     } else {
-      setError(result.message || 'Error procesando la donación.');
+      setError(result.message || "Error procesando la donación.");
     }
 
     setLoading(false);
@@ -75,7 +76,9 @@ export default function Home() {
         </h2>
 
         {error && (
-          <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">{error}</div>
+          <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">
+            {error}
+          </div>
         )}
 
         <div className="grid gap-4 text-sm">
@@ -94,14 +97,14 @@ export default function Home() {
                 />
                 <span>
                   {op.label}
-                  {op.monto > 0 ? ` – $${op.monto.toLocaleString()} CLP` : ''}
+                  {op.monto > 0 ? ` – $${op.monto.toLocaleString()} CLP` : ""}
                 </span>
               </label>
             ))}
           </div>
 
           {/* Otro monto */}
-          {form.opcion === 'Otro monto' && (
+          {form.opcion === "Otro monto" && (
             <input
               type="number"
               placeholder="Monto personalizado"
@@ -122,7 +125,7 @@ export default function Home() {
             international
             defaultCountry="CL"
             value={form.contacto}
-            onChange={(val) => setForm({ ...form, contacto: val || '' })}
+            onChange={(val) => setForm({ ...form, contacto: val || "" })}
             className="w-full p-2 border border-gray-300 rounded"
           />
 
@@ -159,7 +162,8 @@ export default function Home() {
               className="w-4 h-4"
             />
             <label htmlFor="one-time" className="text-sm text-blue-800">
-              Deseo donar <strong>solo una vez</strong> (por defecto se realizará mensualmente)
+              Deseo donar <strong>solo una vez</strong> (por defecto se
+              realizará mensualmente)
             </label>
           </div>
         </div>
@@ -177,15 +181,15 @@ export default function Home() {
           disabled={loading}
           className={`mt-6 w-full py-3 rounded-lg font-semibold transition-colors ${
             loading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-[#1f3b82] text-white hover:bg-[#3355aa]'
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#1f3b82] text-white hover:bg-[#3355aa]"
           }`}
         >
           {loading
-            ? 'Procesando...'
+            ? "Procesando..."
             : isOneTime
-            ? 'Donar una vez'
-            : 'Suscribirme mensualmente'}
+            ? "Donar una vez"
+            : "Suscribirme mensualmente"}
         </button>
       </section>
     </main>
