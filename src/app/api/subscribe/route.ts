@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // Construimos el payload para MercadoPago usando el SDK
     const preApprovalBody = {
-      reason: `Suscripción mensual – ${opcion}`,
+      reason: `Suscripción mensual - ${opcion}`,
       auto_recurring: {
         frequency: 1,
         frequency_type: "months" as const,
