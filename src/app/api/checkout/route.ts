@@ -82,9 +82,13 @@ export async function POST(req: NextRequest) {
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
     };
 
+    console.log("Preference body:", preferenceBody);
+
     const { init_point } = await preferenceClient.create({
       body: preferenceBody,
     });
+
+    console.log("Init point:", init_point);
 
     return NextResponse.json({ init_point });
   } catch (err: any) {

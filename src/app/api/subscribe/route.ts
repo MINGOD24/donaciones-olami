@@ -86,9 +86,13 @@ export async function POST(req: NextRequest) {
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
     };
 
+    console.log("Preapproval body:", preApprovalBody);
+
     const result = await preApprovalClient.create({
       body: preApprovalBody,
     });
+
+    console.log("Result:", result);
 
     if (!result.init_point) {
       console.error("[MP] Error creando suscripción:", result);
