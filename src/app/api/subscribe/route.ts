@@ -64,7 +64,6 @@ export async function POST(req: NextRequest) {
       back_url: `${baseUrl}/success`,
       status: "pending" as const,
       external_reference: rut,
-      ...(notificationUrl && { notification_url: notificationUrl }),
       metadata: {
         contacto,
         dedicatoria: dedicatoria || "",
