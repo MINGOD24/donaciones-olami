@@ -69,7 +69,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-100 via-blue-100 to-indigo-100 flex flex-col items-center">
+    <main className="min-h-screen bg-gradient-to-br flex flex-col items-center">
       <section className="w-full max-w-xl bg-white p-6 rounded-2xl shadow-lg mt-6">
         <h2 className="text-2xl font-semibold text-[#1f3b82] mb-4 text-center">
           Campaña de Donaciones – Olami Chile
