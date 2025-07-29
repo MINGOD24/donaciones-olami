@@ -2,8 +2,8 @@ import "./globals.css";
 import ImageCarousel from "@/components/ImageCarousel";
 
 export const metadata = {
-  title: "Makom Tickets 2025",
-  description: "Compra de entradas para los Yamim Noraim",
+  title: "Donaciones Olami Chile 2025",
+  description: "Donaciones Olami Chile 2025",
 };
 
 export default function RootLayout({
