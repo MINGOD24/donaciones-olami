@@ -4,31 +4,17 @@ import { useState } from "react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
-// const opcionesDonacion = [
-//   { label: "Mentoría personalizada (1 sesión)", monto: 20000 },
-//   { label: "Set de libros para novios", monto: 30000 },
-//   { label: "Grupo de estudio", monto: 50000 },
-//   { label: "Clase Especial de Olami Infinity", monto: 80000 },
-//   { label: "Evento general (charlas, encuentros…)", monto: 100000 },
-//   { label: "Adoptar un grupo mensual de estudio", monto: 200000 },
-//   { label: "Evento Jbiz", monto: 250000 },
-//   { label: "Olami Infinity (Programa mensual de inclusión)", monto: 320000 },
-//   { label: "Patrocinador cena de Shabat", monto: 350000 },
-//   { label: "Shabatón", monto: 1000000 },
-//   { label: "Otro monto", monto: 0 },
-// ];
-
 const opcionesDonacion = [
-  { label: "Mentoría personalizada (1 sesión)", monto: 1000 },
-  { label: "Set de libros para novios", monto: 1000 },
-  { label: "Grupo de estudio", monto: 1000 },
-  { label: "Clase Especial de Olami Infinity", monto: 1000 },
-  { label: "Evento general (charlas, encuentros…)", monto: 1000 },
-  { label: "Adoptar un grupo mensual de estudio", monto: 1000 },
-  { label: "Evento Jbiz", monto: 1000 },
-  { label: "Olami Infinity (Programa mensual de inclusión)", monto: 1000 },
-  { label: "Patrocinador cena de Shabat", monto: 1000 },
-  { label: "Shabatón", monto: 1000 },
+  { label: "Mentoría personalizada (1 sesión)", monto: 20000 },
+  { label: "Set de libros para novios", monto: 30000 },
+  { label: "Grupo de estudio", monto: 50000 },
+  { label: "Clase Especial de Olami Infinity", monto: 80000 },
+  { label: "Evento general (charlas, encuentros…)", monto: 100000 },
+  { label: "Adoptar un grupo mensual de estudio", monto: 200000 },
+  { label: "Evento Jbiz", monto: 250000 },
+  { label: "Olami Infinity (Programa mensual de inclusión)", monto: 320000 },
+  { label: "Patrocinador cena de Shabat", monto: 350000 },
+  { label: "Shabatón", monto: 1000000 },
   { label: "Otro monto", monto: 0 },
 ];
 

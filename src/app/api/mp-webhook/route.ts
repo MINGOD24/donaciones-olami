@@ -1,4 +1,3 @@
-// app/api/mp-webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 
@@ -8,138 +7,56 @@ export async function POST(req: NextRequest) {
   console.log("🔔 Webhook recibido:", JSON.stringify(body, null, 2));
 
   try {
-    // 1) One-time payment (checkout)
+    // Procesar sólo pagos y donaciones manuales
     if (body.type === "payment" && body.data?.id) {
-      await handlePayment(body.data.id, "checkout");
-    }
+      const paymentId = body.data.id;
+      const mpRes = await fetch(
+        `https://api.mercadopago.com/v1/payments/${paymentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env
+              .MERCADO_PAGO_ACCESS_TOKEN_CHECKOUT!}`,
+          },
+        }
+      );
+      if (!mpRes.ok)
+        throw new Error(`Error consultando pago: ${mpRes.statusText}`);
+      const payment = await mpRes.json();
+      console.log("💳 Detalle del pago:", JSON.stringify(payment, null, 2));
 
-    // 2) Manual free donation fallback
-    if (body.type === "manual_free") {
+      // Determinar tipo usando la descripción
+      const description = payment.description || "";
+      const isSubscription = description.startsWith("Suscripción mensual");
+      let tipoFinal: string;
+
+      if (isSubscription) {
+        // Extraer número de cuota si existe
+        const period =
+          payment.point_of_interaction?.transaction_data?.invoice_period
+            ?.period;
+        tipoFinal = period ? `mensual Cuota ${period}` : "mensual";
+      } else {
+        tipoFinal = "único";
+      }
+
+      await guardarEnGoogleSheets(
+        payment.metadata,
+        payment.transaction_amount,
+        tipoFinal
+      );
+    } else if (body.type === "manual_free") {
       console.log("🎁 Procesando donación manual");
       await guardarEnGoogleSheets(body.metadata, 0, "manual");
-    }
-
-    // 3) Subscription events
-    // a) Customer approved the subscription
-    if (body.type === "subscription_preapproval" && body.data?.id) {
-      console.log("🔁 Suscripción aprobada por el cliente");
-      await handleSubscriptionPreapproval(
-        body.data.id,
-        "subscription_preapproval"
-      );
-    }
-
-    // b) Plan associated to subscription
-    if (body.type === "subscription_preapproval_plan" && body.data?.id) {
-      console.log("🔁 Plan de suscripción asociado");
-      await handleSubscriptionPreapproval(
-        body.data.id,
-        "subscription_preapproval_plan"
-      );
-    }
-
-    // c) Recurring monthly payment of subscription
-    if (body.type === "subscription_authorized_payment" && body.data?.id) {
-      console.log("🔄 Cobro mensual de suscripción");
-      await handleSubscriptionCharge(
-        body.data.id,
-        "subscription_authorized_payment"
-      );
-    }
-
-    // Log unrecognized event types
-    const tiposEsperados = [
-      "payment",
-      "manual_free",
-      "subscription_preapproval",
-      "subscription_preapproval_plan",
-      "subscription_authorized_payment",
-    ];
-    if (body.type && !tiposEsperados.includes(body.type)) {
-      console.warn("⚠️ Tipo de webhook no reconocido:", body.type);
+    } else {
+      console.warn("⚠️ Evento no gestionado:", body.type);
     }
 
     return NextResponse.json({ status: "ok" });
   } catch (err: any) {
     console.error("❌ Error procesando webhook:", err);
     return NextResponse.json(
-      { error: "Error procesando webhook", details: err.message },
+      { error: err.message || "Error desconocido" },
       { status: 500 }
-    );
-  }
-}
-
-async function handlePayment(paymentId: string, context: string) {
-  const mpRes = await fetch(
-    `https://api.mercadopago.com/v1/payments/${paymentId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env
-          .MERCADO_PAGO_ACCESS_TOKEN_CHECKOUT!}`,
-      },
-    }
-  );
-  if (!mpRes.ok) throw new Error(`Error consultando pago: ${mpRes.statusText}`);
-  const payment = await mpRes.json();
-  console.log("💳 Detalle del pago:", JSON.stringify(payment, null, 2));
-  if (payment.status === "approved") {
-    await guardarEnGoogleSheets(
-      payment.metadata,
-      payment.transaction_amount,
-      `único|${context}`
-    );
-  }
-}
-
-async function handleSubscriptionPreapproval(
-  preapprovalId: string,
-  eventType: string
-) {
-  const res = await fetch(
-    `https://api.mercadopago.com/v1/preapproval/${preapprovalId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env
-          .MERCADO_PAGO_ACCESS_TOKEN_SUBSCRIPTION!}`,
-      },
-    }
-  );
-  if (!res.ok) throw new Error(`Error en preapproval: ${res.statusText}`);
-  const subscription = await res.json();
-  console.log(
-    "🔁 Detalle de suscripción:",
-    JSON.stringify(subscription, null, 2)
-  );
-  // Guardamos con tipo "mensual|<evento>"
-  await guardarEnGoogleSheets(
-    subscription.metadata,
-    subscription.auto_recurring.transaction_amount,
-    `mensual|${eventType}`
-  );
-}
-
-async function handleSubscriptionCharge(paymentId: string, eventType: string) {
-  const mpRes = await fetch(
-    `https://api.mercadopago.com/v1/payments/${paymentId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env
-          .MERCADO_PAGO_ACCESS_TOKEN_SUBSCRIPTION!}`,
-      },
-    }
-  );
-  if (!mpRes.ok)
-    throw new Error(`Error en cobro subscripción: ${mpRes.statusText}`);
-  const payment = await mpRes.json();
-  console.log(
-    "🔄 Detalle de cobro de suscripción:",
-    JSON.stringify(payment, null, 2)
-  );
-  if (payment.status === "approved") {
-    await guardarEnGoogleSheets(
-      payment.metadata,
-      payment.transaction_amount,
-      `mensual|${eventType}`
     );
   }
 }
