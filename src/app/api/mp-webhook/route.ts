@@ -1,3 +1,4 @@
+// app/api/mp-webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 
@@ -7,46 +8,27 @@ export async function POST(req: NextRequest) {
   console.log("🔔 Webhook recibido:", JSON.stringify(body, null, 2));
 
   try {
-    // Procesar sólo pagos y donaciones manuales
+    // 1) Pago único y recargos de suscripción detectados como pagos
     if (body.type === "payment" && body.data?.id) {
-      const paymentId = body.data.id;
-      const mpRes = await fetch(
-        `https://api.mercadopago.com/v1/payments/${paymentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env
-              .MERCADO_PAGO_ACCESS_TOKEN_CHECKOUT!}`,
-          },
-        }
-      );
-      if (!mpRes.ok)
-        throw new Error(`Error consultando pago: ${mpRes.statusText}`);
-      const payment = await mpRes.json();
-      console.log("💳 Detalle del pago:", JSON.stringify(payment, null, 2));
+      await handlePayment(body.data.id);
+    }
 
-      // Determinar tipo usando la descripción
-      const description = payment.description || "";
-      const isSubscription = description.startsWith("Suscripción mensual");
-      let tipoFinal: string;
+    // 2) Suscripción aprobada por el cliente
+    else if (body.type === "subscription_preapproval" && body.data?.id) {
+      console.log("🔁 Suscripción aprobada por el cliente");
+      await handlePreapproval(body.data.id);
+    }
 
-      if (isSubscription) {
-        // Extraer número de cuota si existe
-        const period =
-          payment.point_of_interaction?.transaction_data?.invoice_period
-            ?.period;
-        tipoFinal = period ? `mensual Cuota ${period}` : "mensual";
-      } else {
-        tipoFinal = "único";
-      }
+    // 3) Cobro mensual de suscripción
+    else if (body.type === "subscription_authorized_payment" && body.data?.id) {
+      console.log("🔄 Cobro mensual de suscripción");
+      await handleSubscriptionCharge(body.data.id);
+    }
 
-      await guardarEnGoogleSheets(
-        payment.metadata,
-        payment.transaction_amount,
-        tipoFinal
-      );
-    } else if (body.type === "manual_free") {
+    // 4) Donación manual (fallback gratuito)
+    else if (body.type === "manual_free") {
       console.log("🎁 Procesando donación manual");
-      await guardarEnGoogleSheets(body.metadata, 0, "manual");
+      await guardarEnGoogleSheets({}, 0, "manual");
     } else {
       console.warn("⚠️ Evento no gestionado:", body.type);
     }
@@ -57,6 +39,119 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: err.message || "Error desconocido" },
       { status: 500 }
+    );
+  }
+}
+
+// Maneja un pago o cobro recurrente
+async function handlePayment(paymentId: string) {
+  const mpRes = await fetch(
+    `https://api.mercadopago.com/v1/payments/${paymentId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env
+          .MERCADO_PAGO_ACCESS_TOKEN_CHECKOUT!}`,
+      },
+    }
+  );
+  if (!mpRes.ok) throw new Error(`Error consultando pago: ${mpRes.statusText}`);
+
+  const payment = await mpRes.json();
+  console.log("💳 Detalle del pago:", JSON.stringify(payment, null, 2));
+
+  // Decidir tipo según descripción
+  const desc = payment.description || "";
+  const isSub = desc.startsWith("Suscripción mensual");
+  let tipo = isSub ? "mensual" : "único";
+
+  // Si es suscripción, extraer cuota
+  if (isSub) {
+    const period =
+      payment.point_of_interaction?.transaction_data?.invoice_period?.period;
+    tipo = period ? `mensual Cuota ${period}` : "mensual";
+  }
+
+  await guardarEnGoogleSheets(
+    payment.metadata,
+    payment.transaction_amount,
+    tipo
+  );
+}
+
+// Maneja la aprobación inicial de suscripción
+async function handlePreapproval(preapprovalId: string) {
+  const res = await fetch(
+    `https://api.mercadopago.com/v1/preapproval/${preapprovalId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env
+          .MERCADO_PAGO_ACCESS_TOKEN_SUBSCRIPTION!}`,
+      },
+    }
+  );
+  if (!res.ok) throw new Error(`Error en preapproval: ${res.statusText}`);
+
+  const sub = await res.json();
+  console.log("🔁 Detalle de preapproval:", JSON.stringify(sub, null, 2));
+
+  // Guardar datos de suscripción
+  await guardarEnGoogleSheets(
+    sub.metadata || {},
+    sub.auto_recurring.transaction_amount,
+    "suscripción aprobada"
+  );
+}
+
+// Maneja el cobro mensual de suscripción (invoice)
+async function handleSubscriptionCharge(subscriptionId: string) {
+  // 1) Buscar la factura más reciente
+  const searchRes = await fetch(
+    `https://api.mercadopago.com/v1/preapproval/${subscriptionId}/authorized_payments/search?limit=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env
+          .MERCADO_PAGO_ACCESS_TOKEN_SUBSCRIPTION!}`,
+      },
+    }
+  );
+  if (!searchRes.ok)
+    throw new Error(
+      `Error buscando authorized_payments: ${searchRes.statusText}`
+    );
+
+  const { results } = (await searchRes.json()) as {
+    results: Array<{ id: string }>;
+  };
+  if (!results?.length)
+    throw new Error("No se encontró ninguna factura de suscripción.");
+
+  const invoiceId = results[0].id;
+
+  // 2) Obtener detalle de la factura
+  const invRes = await fetch(
+    `https://api.mercadopago.com/v1/preapproval/${subscriptionId}/authorized_payments/${invoiceId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env
+          .MERCADO_PAGO_ACCESS_TOKEN_SUBSCRIPTION!}`,
+      },
+    }
+  );
+  if (!invRes.ok)
+    throw new Error(`Error obteniendo datos de factura: ${invRes.statusText}`);
+
+  const invoice = await invRes.json();
+  console.log("🔄 Detalle de invoice:", JSON.stringify(invoice, null, 2));
+
+  if (invoice.status === "approved") {
+    // Extraer número de cuota
+    const period = invoice.invoice_period?.period;
+    const tipo = period ? `mensual Cuota ${period}` : "mensual";
+
+    await guardarEnGoogleSheets(
+      invoice.metadata || {},
+      invoice.transaction_amount,
+      tipo
     );
   }
 }

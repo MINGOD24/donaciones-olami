@@ -1,38 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const images = [
+  "/foto0.jpeg",
   "/foto1.jpeg",
   "/foto2.jpeg",
+  "/foto7.jpeg",
   "/foto3.jpeg",
   "/foto4.jpeg",
   "/foto5.jpeg",
+  "/foto8.jpeg",
   "/foto6.jpeg",
+  "/foto9.jpeg",
 ];
 
 export default function ImageCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const userInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Función para iniciar el timer automático
+  const startAutoTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    timerRef.current = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 4000);
+  };
+
+  // Función para manejar la interacción del usuario
+  const handleUserInteraction = () => {
+    setIsUserInteracting(true);
+
+    // Limpiar el timer automático
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Limpiar el timeout anterior si existe
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+
+    // Reiniciar el timer automático después de 6 segundos sin interacción
+    userInteractionTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      startAutoTimer();
+    }, 6000);
+  };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 4000); // Cambia cada 4 segundos
+    // Solo iniciar el timer si el usuario no está interactuando
+    if (!isUserInteracting) {
+      startAutoTimer();
+    }
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (userInteractionTimeoutRef.current) {
+        clearTimeout(userInteractionTimeoutRef.current);
+      }
+    };
+  }, [isUserInteracting]);
 
   const goToSlide = (index: number) => {
+    handleUserInteraction();
     setCurrentIndex(index);
   };
 
   const goToPrevious = () => {
+    handleUserInteraction();
     setCurrentIndex((prevIndex) =>
       prevIndex === 0 ? images.length - 1 : prevIndex - 1
     );
   };
 
   const goToNext = () => {
+    handleUserInteraction();
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
   };
 
@@ -58,7 +108,7 @@ export default function ImageCarousel() {
       </div>
 
       {/* Indicadores */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
         {images.map((_, index) => (
           <button
             key={index}
@@ -76,7 +126,7 @@ export default function ImageCarousel() {
       {/* Botones de navegación */}
       <button
         onClick={goToPrevious}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm z-10"
         aria-label="Imagen anterior"
       >
         <svg
@@ -96,7 +146,7 @@ export default function ImageCarousel() {
 
       <button
         onClick={goToNext}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm z-10"
         aria-label="Siguiente imagen"
       >
         <svg
